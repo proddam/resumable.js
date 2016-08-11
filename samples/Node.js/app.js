@@ -1,5 +1,7 @@
 var express = require('express');
-var resumable = require('./resumable-node.js')('/tmp/resumable.js/');
+var fs = require('fs');
+var path = require('path');
+var resumable = require('./resumable-node.js')(path.join(__dirname, 'uploads'));
 var app = express();
 var multipart = require('connect-multiparty');
 
@@ -16,11 +18,24 @@ app.use(multipart());
 
 // Handle uploads through Resumable.js
 app.post('/upload', function(req, res){
-    resumable.post(req, function(status, filename, original_filename, identifier){
-        console.log('POST', status, original_filename, identifier);
-
-        res.send(status);
-    });
+  resumable.post(req, function(status, filename, original_filename, identifier){
+    console.log('POST', status, original_filename, identifier);
+    if (status === 'done') {
+      //when all chunks uploaded, then createWriteStream to /uploads folder with filename
+      var stream = fs.createWriteStream(path.join(__dirname, 'uploads', filename));
+      //stitches the file chunks back together to create the original file. 
+      resumable.write(identifier, stream);
+      // stream.on('data', function(data){ console.log('data write'); });
+      // stream.on('end', function(){ console.log('end write'); });
+      // stream.on('pipe', function(){ console.log('pipe write'); });
+      stream.on('finish', function(){ 
+        console.log('finish write'); 
+        //delete chunks after original file is re-created. 
+        resumable.clean(identifier);
+      });
+    }
+    res.send(status);
+  });
 });
 
 // Handle status checks on chunks through Resumable.js

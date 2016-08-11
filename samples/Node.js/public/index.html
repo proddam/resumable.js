@@ -48,7 +48,7 @@
       <script>
         var r = new Resumable({
             target:'/upload',
-            chunkSize:1*1024*1024,
+            chunkSize:1*1024*1024*8,
             simultaneousUploads:4,
             testChunks:false,
             throttleProgressCallbacks:1
